@@ -1,0 +1,14 @@
+{
+    "offices": [
+        {
+            "address": "Aabogade 15",
+            "id": "123",
+            "image": "https://lh3.googleusercontent.com/tpBMFN5os8K-qXIHiAX5SZEmN5fCzIGrj9FdJtbZPUkC91ookSoY520NYn7fK5yqmh1L1m3F2SJA58v6Qps3JusdrxoFSwk6Ajv2K88",
+            "lat": -9.43847,
+            "lng": -40.5052,
+            "name": "Aarhus",
+            "phone": "",
+            "region": "América do Sul"
+        }
+    ]
+}
