@@ -1,6 +1,0 @@
-source "C:/Users/Guilherme/esp/esp-idf/components/bootloader/Kconfig.projbuild"
-source "C:/Users/Guilherme/esp/esp-idf/components/esp_app_format/Kconfig.projbuild"
-source "C:/Users/Guilherme/esp/esp-idf/components/esp_rom/Kconfig.projbuild"
-source "C:/Users/Guilherme/esp/esp-idf/components/esptool_py/Kconfig.projbuild"
-source "C:/Users/Guilherme/esp/esp-idf/components/partition_table/Kconfig.projbuild"
-source "X:/Stuffs/Faculdade/2022.1/ie/projects/sdspi/main/Kconfig.projbuild"
