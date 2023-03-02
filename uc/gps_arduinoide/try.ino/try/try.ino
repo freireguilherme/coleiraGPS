@@ -25,18 +25,40 @@ void loop() {
 void displayInfo()
 {
   Serial.print(F("Location: "));
-  if (gps.location.isValid()){
+  //if (gps.location.isValid()){
+    Serial.println(gps.satellites.value()); // Number of satellites in use (u32)
     Serial.print("Lat: ");
     Serial.print(gps.location.lat(), 6);
+    Serial.print("Lat: ");
+    Serial.println(gps.location.rawLat().deg);
     Serial.print("Lng: ");
-    Serial.print(F(","));
     Serial.print(gps.location.lng(), 6);
+    Serial.print("Lng: ");
+    Serial.println(gps.location.rawLng().deg);
+    Serial.print(F(","));
+    Serial.print("\n");
+    Serial.print(gps.date.day());//LEITURA DO DIA
+    Serial.print("/");
+    Serial.print(gps.date.month());//LEITURA DO MêS
+    Serial.print("/");
+    Serial.println(gps.date.year());//LEITURA DO ANO
+    
+    if (gps.time.hour() < 10) Serial.print(F("0"));
+      Serial.print(gps.time.hour() - 3); //AJUSTA O FUSO HORARIO PARA NOSSA REGIAO (FUSO DE SP 03:00, POR ISSO O -3 NO CÓDIGO) E IMPRIME NA SERIAL
+    Serial.print(":");
+    if (gps.time.minute() < 10) Serial.print(F("0"));
+      Serial.print(gps.time.minute());//IMPRIME A INFORMAÇÃO DOS MINUTOS NA SERIAL
+    Serial.print(":");
+    if (gps.time.second() < 10) Serial.print(F("0"));
+      Serial.print(gps.time.second());//IMPRIME A INFORMAÇÃO DOS SEGUNDOS NA SERIAL
+ 
+//}
     Serial.println();
-  }  
-  else
+  //}  
+  /*else
   {
     Serial.print(F("INVALID\n"));
-  }
+  }*/
 }
 
 void updateSerial()

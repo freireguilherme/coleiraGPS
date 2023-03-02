@@ -34,14 +34,14 @@ endif()
 
 # Set default install directory permissions.
 if(NOT DEFINED CMAKE_OBJDUMP)
-  set(CMAKE_OBJDUMP "C:/Users/Guilherme/esp/esp-idf/tools/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-objdump.exe")
+  set(CMAKE_OBJDUMP "C:/Users/Guilherme/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-objdump.exe")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("X:/Stuffs/Faculdade/2022.1/ie/projects/blink/build/esp-idf/mbedtls/mbedtls/include/cmake_install.cmake")
-  include("X:/Stuffs/Faculdade/2022.1/ie/projects/blink/build/esp-idf/mbedtls/mbedtls/3rdparty/cmake_install.cmake")
-  include("X:/Stuffs/Faculdade/2022.1/ie/projects/blink/build/esp-idf/mbedtls/mbedtls/library/cmake_install.cmake")
+  include("X:/Stuffs/Faculdade/2022.1/ie/projects/uc/blink/build/esp-idf/mbedtls/mbedtls/include/cmake_install.cmake")
+  include("X:/Stuffs/Faculdade/2022.1/ie/projects/uc/blink/build/esp-idf/mbedtls/mbedtls/3rdparty/cmake_install.cmake")
+  include("X:/Stuffs/Faculdade/2022.1/ie/projects/uc/blink/build/esp-idf/mbedtls/mbedtls/library/cmake_install.cmake")
 
 endif()
 

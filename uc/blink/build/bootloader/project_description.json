@@ -1,8 +1,8 @@
 {
     "project_name":       "bootloader",
     "project_path":       "C:/Users/Guilherme/esp/esp-idf/components/bootloader/subproject",
-    "build_dir":          "X:/Stuffs/Faculdade/2022.1/ie/projects/blink/build/bootloader",
-    "config_file":        "X:/Stuffs/Faculdade/2022.1/ie/projects/blink/sdkconfig",
+    "build_dir":          "X:/Stuffs/Faculdade/2022.1/ie/projects/uc/blink/build/bootloader",
+    "config_file":        "X:/Stuffs/Faculdade/2022.1/ie/projects/uc/blink/sdkconfig",
     "config_defaults":    "",
     "app_elf":            "bootloader.elf",
     "app_bin":            "bootloader.bin",

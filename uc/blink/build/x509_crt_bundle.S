@@ -1,4 +1,4 @@
-/* * Data converted from X:/Stuffs/Faculdade/2022.1/ie/projects/blink/build/esp-idf/mbedtls/x509_crt_bundle
+/* * Data converted from X:/Stuffs/Faculdade/2022.1/ie/projects/uc/blink/build/esp-idf/mbedtls/x509_crt_bundle
  */
 .data
 .section .rodata.embedded

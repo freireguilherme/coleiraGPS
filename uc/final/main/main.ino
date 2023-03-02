@@ -4,19 +4,21 @@
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include <HardwareSerial.h>
+#include <SoftwareSerial.h>
 
 #define DELAY_IN_MINUTES 1
-#define TICK_RATE_MS 1000  // assuming tick rate is 1ms
+#define TICK_RATE_MS 1000 // assuming tick rate is 1ms
+#define SerialGPS Serial2
 
 const char *ssid = "Freire 2G";
 const char *password = "262806va";
-const char *serverName = "https://bdfa-170-78-23-134.sa.ngrok.io/";
+const char *serverName = "https://postman-echo.com/post"; //"https://daea-170-78-23-134.sa.ngrok.io";
 
-const int RXPin = 9;  // SIM800L
-const int TXPin = 10;
+const int RXPin = 4; // SIM800L
+const int TXPin = 5;
 
-HardwareSerial SerialGSM(1);
-HardwareSerial SerialGPS(2);
+SoftwareSerial SerialGSM;
+// HardwareSerial SerialGPS(2);
 
 SemaphoreHandle_t meuMutex;
 TaskHandle_t taskGPSHandle, taskWifiHandle, taskGSMHandle;
@@ -25,15 +27,26 @@ StaticJsonDocument<200> gpsData;
 
 String requestBody;
 
-void setup() {
-  Serial.begin(9600);                               // monitor
-  //SerialGSM.begin(9600, SERIAL_8N1, RXPin, TXPin);  // GSM module, PINS RX: 10 e TX: 11
-  SerialGPS.begin(9600, SERIAL_8N1, 16, 17);        // GPS modute, PINS RX2 e TX2
+void setup()
+{
+  Serial.begin(115200);                                     // monitor
+  while(!Serial);
+  SerialGSM.begin(9600, SWSERIAL_8N1, RXPin, TXPin, false); // GSM module, PINS RX: 4 e TX: 5, software serial
+  if (!SerialGSM)                                           // If the object did not initialize, then its configuration is invalid
+  {
+    Serial.println("Invalid SoftwareSerial pin configuration, check config");
+    while (1)
+    {
+    }
+  }
+  SerialGPS.begin(115200, SERIAL_8N1, 16, 17); // GPS modute, PINS RX2 e TX2
 
   WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     vTaskDelay(pdMS_TO_TICKS(500));
+    Serial.println(".");
   }
 
   Serial.println("Connected to WiFi network with IP Address: ");
@@ -41,117 +54,130 @@ void setup() {
 
   meuMutex = xSemaphoreCreateMutex();
 
-  xTaskCreate(taskGPS, "task_gps", 10000, NULL, 1, &taskGPSHandle);
+  //xTaskCreate(taskGPS, "task_gps", 10000, NULL, 1, &taskGPSHandle);
   xTaskCreate(taskWifi, "task_wifi", 10000, NULL, 1, &taskWifiHandle);
-  //xTaskCreate(taskGSM, "task_gsm", 10000, NULL, 1, &taskGSMHandle);
+  // xTaskCreate(taskGSM, "task_gsm", 10000, NULL, 1, &taskGSMHandle);
 }
 
-void loop() {
+void loop()
+{
 }
 
-void taskGPS(void *pvParameters)  // coleta dados do gps
+void taskGPS(void *pvParameters) // coleta dados do gps
 {
   TinyGPSPlus gps;
-  String lat, lng, /*velocidade, altitude, data, hora, minutos, segundos,*/ dados;
+  double lat, lng, /*velocidade, altitude, data, hora, minutos, segundos,*/ dados;
 
-  while (true) {
-    while (SerialGPS.available() > 0) {
-      if (gps.encode(SerialGPS.read())) {
-        //if (gps.location.isValid()) {
-        lat = gps.location.lat();
-        lng = gps.location.lng();
-        /*velocidade = gps.speed.kmph();
-                    altitude = gps.altitude.meters();
-                    data = gps.date.value();
-                    hora = gps.time.hour();
-                    minutos = gps.time.minute();
-                    segundos = gps.time.second();
-                    */
-        if (xSemaphoreTake(meuMutex, portMAX_DELAY) == pdTRUE) {
-          gpsData.clear();
-          gpsData["lat"] = lat;
-          gpsData["lng"] = lng;
-          /*gpsData["velocidade"] = velocidade;
-                      gpsData["altitude"] = altitude;
-                      gpsData["data"] = data;
-                      gpsData["hora"] = hora;
-                      gpsData["minutos"] = minutos;
-                      gpsData["segundos"] = segundos;
+  while (true)
+  {
+    while (SerialGPS.available() > 0)
+    {
+      if (gps.encode(SerialGPS.read()))
+      {
+        if (gps.location.isValid())
+        {
+          lat = gps.location.lat();
+          lng = gps.location.lng();
+          /*velocidade = gps.speed.kmph();
+                      altitude = gps.altitude.meters();
+                      data = gps.date.value();
+                      hora = gps.time.hour();
+                      minutos = gps.time.minute();
+                      segundos = gps.time.second();
                       */
-          requestBody = "\0";
-          serializeJson(gpsData, requestBody);
+          if (xSemaphoreTake(meuMutex, portMAX_DELAY) == pdTRUE)
+          {
+            gpsData.clear();
+            gpsData["lat"] = lat;
+            gpsData["lng"] = lng;
+            /*gpsData["velocidade"] = velocidade;
+                          gpsData["altitude"] = altitude;
+                          gpsData["data"] = data;
+                          gpsData["hora"] = hora;
+                          gpsData["minutos"] = minutos;
+                          gpsData["segundos"] = segundos;
+                          */
+            // requestBody = "\0";
+            // serializeJson(gpsData, requestBody);
 
-          Serial.println(requestBody);
-          xSemaphoreGive(meuMutex);
+            // Serial.println(requestBody);
+            xSemaphoreGive(meuMutex);
+          }
         }
-        //}
       }
     }
 
-    vTaskDelay(pdMS_TO_TICKS(5000));  //delay de 0,5s
-    //vTaskSuspend(taskGPSHandle);
+    vTaskDelay(pdMS_TO_TICKS(5000)); // delay de 0,5s
+    // vTaskSuspend(taskGPSHandle);
   }
 }
 
-void taskWifi(void *pvParameters)  // envia por wifi
+void taskWifi(void *pvParameters) // envia por wifi
 {
-  while (true) {
-    //garantir que está conectado no wifi
+  while (true)
+  {
+    // garantir que está conectado no wifi
     WiFiClient client;
     HTTPClient http;
-    if (WiFi.status() != WL_CONNECTED) {
+    if (WiFi.status() != WL_CONNECTED)
+    {
       Serial.println("WiFi connection lost, reconnecting...");
       WiFi.begin(ssid, password);
 
-      while (WiFi.status() != WL_CONNECTED) {
+      while (WiFi.status() != WL_CONNECTED)
+      {
         vTaskDelay(pdMS_TO_TICKS(500));
         Serial.println("Connecting to WiFi...");
       }
 
       Serial.println("Connected to WiFi");
-    }  //end if
-    
-    //começa uma conexao entre o localhost e o server
-    http.begin(client, serverName);  //char *serverName = "https://bdfa-170-78-23-134.sa.ngrok.io/";
-    //informa o cabeçalho
+    } // end if
+
+    // começa uma conexao entre o localhost e o server
+    http.begin(client, serverName); // char *serverName = "https://bdfa-170-78-23-134.sa.ngrok.io/";
+    // informa o cabeçalho
     http.addHeader("Content-Type", "application/json");
 
     // transforma para uma versão string minimizada do Json. pode usar serializeJsonPretty()
-    //entra no semáfaro por ate 58s
-    if (xSemaphoreTake(meuMutex, pdMS_TO_TICKS(58000)) == pdTRUE) {
+    // entra no semáfaro por ate 58s
+    if (xSemaphoreTake(meuMutex, pdMS_TO_TICKS(58000)) == pdTRUE)
+    {
       requestBody = "";
       serializeJson(gpsData, requestBody);
-      
-      //envia a requisição post
-      Serial.println(requestBody.c_str());
-      int httpResponseCode = http.POST(requestBody.c_str());
+      Serial.println(requestBody);
+      // envia a requisição post
+      int httpResponseCode = http.POST(requestBody);
       vTaskDelay(pdMS_TO_TICKS(500));
-      
-      //imprime a resposta
-      //Serial.println(httpResponseCode);
-      if (httpResponseCode > 0) {
+
+      // imprime a resposta
+      // Serial.println(httpResponseCode);
+      if (httpResponseCode > 0)
+      {
         String response = http.getString();
         Serial.println(httpResponseCode);
         Serial.println(response);
-      } else {
+      }
+      else
+      {
         Serial.printf("Error occurred while sending HTTP POST: %s\n", http.errorToString(httpResponseCode).c_str());
       }
-      //Serial.println(requestBody);
-      //sai do semáforo
+      // Serial.println(requestBody);
+      // sai do semáforo
       xSemaphoreGive(meuMutex);
     }
 
     http.end();
-    //vTaskResume(taskGPSHandle);
-    //delay de 1 minutos entre os envios
+    // vTaskResume(taskGPSHandle);
+    // delay de 1 minutos entre os envios
     vTaskDelay(DELAY_IN_MINUTES * 60 * TICK_RATE_MS / portTICK_PERIOD_MS);
   }
 }
 
-void taskGSM(void *pvParameters)  // envia por gprs
+void taskGSM(void *pvParameters) // envia por gprs
 {
-  while (true) {
-    //GSM Communication Starts
+  while (true)
+  {
+    // GSM Communication Starts
 
     if (SerialGSM.available())
       Serial.write(SerialGSM.read());
@@ -163,16 +189,16 @@ void taskGSM(void *pvParameters)  // envia por gprs
     vTaskDelay(pdMS_TO_TICKS(6000));
     Serial.write(SerialGSM.read());
 
-    SerialGSM.println("AT+SAPBR=3,1,\"APN\",\"gprs.oi.com.br\"");  // APN
+    SerialGSM.println("AT+SAPBR=3,1,\"APN\",\"gprs.oi.com.br\""); // APN
     vTaskDelay(pdMS_TO_TICKS(6000));
     Serial.write(SerialGSM.read());
 
-    //Enable bearer 1
+    // Enable bearer 1
     SerialGSM.println("AT+SAPBR=1,1");
     vTaskDelay(pdMS_TO_TICKS(6000));
     Serial.write(SerialGSM.read());
 
-    //Check whether bearer 1 is open.
+    // Check whether bearer 1 is open.
     SerialGSM.println("AT+SAPBR=2,1");
     vTaskDelay(pdMS_TO_TICKS(6000));
     Serial.write(SerialGSM.read());
@@ -186,7 +212,7 @@ void taskGSM(void *pvParameters)  // envia por gprs
     Serial.write(SerialGSM.read());
     vTaskDelay(pdMS_TO_TICKS(4000));
 
-    SerialGSM.println("AT+HTTPPARA=\"URL\",\"https://bdfa-170-78-23-134.sa.ngrok.io\"");  // Server address
+    SerialGSM.println("AT+HTTPPARA=\"URL\",\"https://bdfa-170-78-23-134.sa.ngrok.io\""); // Server address
     vTaskDelay(pdMS_TO_TICKS(4000));
     Serial.write(SerialGSM.read());
 
