@@ -1,9 +1,8 @@
+#include <Arduino.h>
 #include <TinyGPSPlus.h>
-#include <HTTPClient.h>
 #include <WiFi.h>
-#include <ArduinoJson.h>
 #include <HardwareSerial.h>
-#include <SoftwareSerial.h>
+#include <SoftwareSerial.h> //versão 6.18
 #include "ThingSpeak.h"
 
 #define DELAY_IN_MINUTES 1
@@ -15,31 +14,30 @@ unsigned long myChannelNumber = 2053888;
 const String myWriteAPIKey = ""; //chave api para escrita
 const String server = "https://api.thingspeak.com/update";
 
-const char *ssid = "Freire 2G";
-const char *password = "262806va";
+const char *ssid = "FREIRE-PC 0862";  //ssid da sua rede
+const char *password = "guilherme123"; //senha da sua rede
 
-float lat, lng = 0.0;
+float lat, lng = 0.0;               //latitude e longitude são globais pois as 3 funções acessam essas variáveis
 
-const String USER = "oi";
-const String PASS = "oi";
+const String USER = "oi";           //APN user
+const String PASS = "oi";           //APN senha
 
 
 const int RXPin = 4; // SIM800L
 const int TXPin = 5;
 
 SoftwareSerial SerialGSM;
-// HardwareSerial SerialGPS(2);
 
-SemaphoreHandle_t meuMutex;
-TaskHandle_t taskGPSHandle, taskWifiHandle, taskGSMHandle;
 
-StaticJsonDocument<200> gpsData;
+SemaphoreHandle_t meuMutex;         //mutex para controle de acesso às variáveis (lat e lng)
+TaskHandle_t taskGPSHandle, taskWifiHandle, taskGSMHandle; //handlers para controle das task (nem são utilizadas)
 
-String requestBody = "";
+String requestBody = "";          //corpo da requisição POST
 
 void setup()
 {
-  Serial.begin(115200);                                     // monitor
+  Serial.begin(9600);                                     // monitor
+
   while (!Serial);
   SerialGSM.begin(9600, SWSERIAL_8N1, RXPin, TXPin, false); // GSM module, PINS RX: 4 e TX: 5, software serial
   if (!SerialGSM)                                           // If the object did not initialize, then its configuration is invalid
@@ -49,9 +47,15 @@ void setup()
     {
     }
   }
-  Serial2.begin(9600, SERIAL_8N1, 16, 17); // GPS modute, PINS RX2 e TX2
-  while (!Serial2);
 
+  Serial2.begin(9600, SERIAL_8N1, 16, 17); // GPS modute, PINS RX2 e TX2
+  if (!Serial2)                                           // If the object did not initialize, then its configuration is invalid
+  {
+    Serial.println("Invalid eSerial pin configuration, check config");
+    while (1)
+    {
+    }
+  }
 
   WiFi.begin(ssid, password);
 
@@ -93,13 +97,10 @@ void taskGPS(void *pvParameters) // coleta dados do gps
             lat = gps.location.lat();
             lng = gps.location.lng();
 
-            gpsData.clear();
-            gpsData["lat"] = lat;
-            gpsData["lng"] = lng;
-
             xSemaphoreGive(meuMutex);
           }
         }
+        Serial.println(lat, lng);
       }
     }
     vTaskDelay(pdMS_TO_TICKS(5000)); // delay de 0,5s
@@ -128,7 +129,7 @@ void taskWifi(void *pvParameters) // envia por wifi
     WiFiClient client;
     ThingSpeak.begin(client);  // Initialize ThingSpeak
 
-    if (xSemaphoreTake(meuMutex, pdMS_TO_TICKS(58000)) == pdTRUE)
+    if (xSemaphoreTake(meuMutex, portMAX_DELAY) == pdTRUE)
     {
       ThingSpeak.setField(1, lat);
       ThingSpeak.setField(2, lng);
@@ -158,14 +159,17 @@ void taskGSM(void *pvParameters) // envia por gprs
 
     if (SerialGSM.available())
       Serial.write(SerialGSM.read());
+    if (xSemaphoreTake(meuMutex, portMAX_DELAY) == pdTRUE)
+    {
+      requestBody = server;
+      requestBody += "?api_key=" + myWriteAPIKey;
+      requestBody += "&field1=";
+      requestBody += String(lat);
+      requestBody += "&field2=";
+      requestBody += String(lng);
 
-    requestBody = server;
-    requestBody += "?api_key=" + myWriteAPIKey;
-    requestBody += "&field1=";
-    requestBody += String(lat);
-    requestBody += "&field2=";
-    requestBody += String(lng);
-
+      xSemaphoreGive(meuMutex);
+    }
     SerialGSM.println("AT");
     vTaskDelay(pdMS_TO_TICKS(3000));
 
