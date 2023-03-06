@@ -12,11 +12,16 @@
 
 
 unsigned long myChannelNumber = 2053888;
-const char * myWriteAPIKey = ""; //chave api para escrita
-const char *server = "api.thingspeak.com";
+const String myWriteAPIKey = ""; //chave api para escrita
+const String server = "https://api.thingspeak.com/update";
+
 const char *ssid = "Freire 2G";
 const char *password = "262806va";
+
 float lat, lng = 0.0;
+
+const String USER = "oi";
+const String PASS = "oi";
 
 
 const int RXPin = 4; // SIM800L
@@ -30,7 +35,7 @@ TaskHandle_t taskGPSHandle, taskWifiHandle, taskGSMHandle;
 
 StaticJsonDocument<200> gpsData;
 
-String requestBody;
+String requestBody = "";
 
 void setup()
 {
@@ -63,7 +68,7 @@ void setup()
 
   xTaskCreate(taskGPS, "task_gps", 10000, NULL, 1, &taskGPSHandle);
   xTaskCreate(taskWifi, "task_wifi", 10000, NULL, 1, &taskWifiHandle);
-  // xTaskCreate(taskGSM, "task_gsm", 10000, NULL, 1, &taskGSMHandle);
+  xTaskCreate(taskGSM, "task_gsm", 10000, NULL, 1, &taskGSMHandle);
 }
 
 void loop()
@@ -91,7 +96,7 @@ void taskGPS(void *pvParameters) // coleta dados do gps
             gpsData.clear();
             gpsData["lat"] = lat;
             gpsData["lng"] = lng;
-           
+
             xSemaphoreGive(meuMutex);
           }
         }
@@ -127,7 +132,7 @@ void taskWifi(void *pvParameters) // envia por wifi
     {
       ThingSpeak.setField(1, lat);
       ThingSpeak.setField(2, lng);
-      int x = ThingSpeak.writeFields(myChannelNumber , myWriteAPIKey);
+      int x = ThingSpeak.writeFields(myChannelNumber , (myWriteAPIKey).c_str());
       if (x == 200) {
         Serial.println("Channel update successful.");
       }
@@ -154,6 +159,13 @@ void taskGSM(void *pvParameters) // envia por gprs
     if (SerialGSM.available())
       Serial.write(SerialGSM.read());
 
+    requestBody = server;
+    requestBody += "?api_key=" + myWriteAPIKey;
+    requestBody += "&field1=";
+    requestBody += String(lat);
+    requestBody += "&field2=";
+    requestBody += String(lng);
+
     SerialGSM.println("AT");
     vTaskDelay(pdMS_TO_TICKS(3000));
 
@@ -164,6 +176,9 @@ void taskGSM(void *pvParameters) // envia por gprs
     SerialGSM.println("AT+SAPBR=3,1,\"APN\",\"gprs.oi.com.br\""); // APN
     vTaskDelay(pdMS_TO_TICKS(6000));
     Serial.write(SerialGSM.read());
+
+    SerialGSM.println("AT+SAPBR=3,1,\"USER\"," + USER);
+    SerialGSM.println("AT+SAPBR=3,1,\"PASS\"," + PASS);
 
     // Enable bearer 1
     SerialGSM.println("AT+SAPBR=1,1");
@@ -184,11 +199,11 @@ void taskGSM(void *pvParameters) // envia por gprs
     Serial.write(SerialGSM.read());
     vTaskDelay(pdMS_TO_TICKS(4000));
 
-    SerialGSM.println("AT+HTTPPARA=\"URL\",\"https://bdfa-170-78-23-134.sa.ngrok.io\""); // Server address
+    SerialGSM.println("AT+HTTPPARA=\"CONTENT\",\"application/json\"");
     vTaskDelay(pdMS_TO_TICKS(4000));
     Serial.write(SerialGSM.read());
 
-    SerialGSM.println("AT+HTTPPARA=\"CONTENT\",\"application/json\"");
+    SerialGSM.println("AT+HTTPPARA=\"URL\"," + requestBody); // Server address
     vTaskDelay(pdMS_TO_TICKS(4000));
     Serial.write(SerialGSM.read());
 
