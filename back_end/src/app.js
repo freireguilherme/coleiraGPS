@@ -1,87 +1,62 @@
-  const express = require('express')
-  const { createServer } = require("http");
-  const { Server } = require("socket.io")
-  const mongoose = require("mongoose")
-  const app = express()
-  const MAX_LOCALIZATIONS = 7
+const express = require("express");
+const { createServer } = require("http");
+const axios = require("axios");
 
-  mongoose.connect('mongodb+srv://root:root@cluster0.1vgvw7r.mongodb.net/?retryWrites=true&w=majority');
+const app = express();
+const MAX_LOCALIZATIONS = 7;
+const thingspeakApiUrl = process.env.THINGSPEAK_URL;
+const httpServer = createServer(app);
 
-  const httpServer = createServer(app);
-  const socket = new Server(httpServer, {
-    cors: {
-      origin: "*"
-    } 
-  });
+app.use(express.json());
 
-  const { Schema } = mongoose;
+app.post("/", async (req, res) => {
+  const { lat, lng } = req.body;
 
-  const localizationSchema = new Schema({
-    lat: Number,
-    lng: Number
-  });
-
-  const Localization = mongoose.model('Localization', localizationSchema)
-
-  app.use(express.json())
-
-  socket.on("connection", (socket) => {
-    console.log(socket, 'usuario conectado')
-    sendPetLocalization()
-  });
-  socket.on("connect_error", (err) => {
-    console.log(`connect_error due to ${err.message}`);
-  });
-
-  app.post('/', async (req, res) => { 
-    const { lat, lng } = req.body;
-
-    try {
-      const localizationQuantity = await Localization.count({})
-      if(localizationQuantity >= MAX_LOCALIZATIONS) {
-        await Localization.findOneAndDelete(
-          { },
-          { "sort": { "date": -1 } }
-        )
-      }
-      await Localization.create({ lat, lng})
-      sendlastLocalization()
-      res.send({message: "Sucesso", lat, lng})
-    } catch(err) {
-      console.log(err)
-      res.send({ message: "Erro no sistema"})
+  try {
+    const localizationQuantity = await Localization.count({});
+    if (localizationQuantity >= MAX_LOCALIZATIONS) {
+      await Localization.findOneAndDelete({}, { sort: { date: -1 } });
     }
-
-
-  })
-
-  app.get('/', async (_, res) => {
-    try {
-      const results = await Localization.find({})
-      res.send({message: "Sucesso", results })
-    } catch(err) {
-      console.log(err)
-      res.send({ message: "Erro no sistema"})
-    }
-  })
-
-  async function getLastLocalization() {
-    try {
-      const localization = await Localization.find({ created_at: -1 })
-      return localization
-    } catch(err) {
-      console.log('err',err )
-    }
+    await Localization.create({ lat, lng });
+    sendPetLocalization();
+    res.send({ message: "Sucesso", lat, lng });
+  } catch (err) {
+    console.log(err);
+    res.send({ message: "Erro no sistema" });
   }
+});
 
+app.get("/", async (_, res) => {
+  try {
+    const result = await axios.get(thingspeakApiUrl);
 
-  
+    const localizations = result.data.feeds
+      .slice(-7)
+      .reverse()
+      .map((localization) => {
+        const { field1, field2, entry_id } = localization;
+        return { lat: field1, lng: field2, id: entry_id };
+      });
 
-
-  async function sendPetLocalization() {
-    console.log('oii')
-    const lastLocalization = await getLastLocalization()
-    socket.emit("pet_localization", lastLocalization)
+    res.send({ message: "Sucesso", localizations });
+  } catch (err) {
+    console.log(err);
+    res.send({ message: "Erro no sistema" });
   }
+});
 
-  httpServer.listen(3000) 
+async function getLastLocalization() {
+  try {
+    const localization = await Localization.find({ created_at: -1 });
+    return localization;
+  } catch (err) {
+    console.log("err", err);
+  }
+}
+
+async function sendPetLocalization() {
+  const lastLocalization = await getLastLocalization();
+  socket.emit("pet_localization", lastLocalization);
+}
+
+httpServer.listen(3000);
