@@ -1,10 +1,12 @@
 const express = require("express");
 const { createServer } = require("http");
 const axios = require("axios");
+require("dotenv").config();
 
 const app = express();
 const MAX_LOCALIZATIONS = 7;
 const thingspeakApiUrl = process.env.THINGSPEAK_URL;
+
 const httpServer = createServer(app);
 
 app.use(express.json());
